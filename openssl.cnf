@@ -9,6 +9,8 @@ CN = mutating-webhook.default.svc
 
 [ ext ]
 subjectAltName          = @alt_names
+basicConstraints        = CA:TRUE
+keyUsage                = keyCertSign, digitalSignature
 
 [alt_names]
 DNS.1   = mutating-webhook.default.svc

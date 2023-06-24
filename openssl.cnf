@@ -1,0 +1,17 @@
+[ req ]
+default_bits       = 2048
+prompt             = no
+default_md         = sha256
+distinguished_name = dn
+
+[ dn ]
+CN = mutating-webhook.default.svc
+
+[ ext ]
+subjectAltName          = @alt_names
+
+[alt_names]
+DNS.1   = mutating-webhook.default.svc
+DNS.2   = mutating-webhook.default
+DNS.3   = mutating-webhook.default.svc.cluster.local
+DNS.4   = mutating-webhook.default.svc.cluster.local.

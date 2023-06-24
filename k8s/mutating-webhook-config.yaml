@@ -1,0 +1,20 @@
+kind: MutatingWebhookConfiguration
+apiVersion: admissionregistration.k8s.io/v1
+metadata:
+  name: pod-label-add
+webhooks:
+  - name: pod-label-add.trstringer.com
+    clientConfig:
+      caBundle: ${CA_BUNDLE}
+      service:
+        namespace: default
+        name: mutating-webhook
+        path: /mutate
+    rules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+        operations: ["CREATE"]
+        scope: Namespaced
+    sideEffects: None
+    admissionReviewVersions: ["v1"]

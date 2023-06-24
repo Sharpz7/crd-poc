@@ -1,0 +1,73 @@
+version: 1
+
+scripts:
+  default: |
+    sharpdev kind
+    sharpdev key
+    sharpdev build
+    sharpdev build-image-kind
+    sharpdev push-kind
+    sharpdev deploy
+
+  build: |
+    mkdir -p ./bin
+    go build -o ./bin
+
+  kind: |
+    go install sigs.k8s.io/kind@v0.20.0
+    kind create cluster --name kind --config ./k8s/kind.yaml
+    kubectl config set-context --current --namespace=default
+
+  kind-delete: |
+    kind delete cluster --name kind
+
+  key: |
+    sudo apt-get install openssl
+    mkdir -p web
+    if [ ! -f web/webhook.crt ]; then
+      openssl genrsa -out web/ca.key 2048
+      openssl req -x509 -new -nodes -key web/ca.key -subj "/CN=Example-CA" -days 3650 -out web/ca.crt -extensions ext -config openssl.cnf
+
+      openssl genrsa -out web/webhook.key 2048
+      openssl req -new -key web/webhook.key -out web/webhook.csr -subj "/CN=mutating-webhook.default.svc" -config openssl.cnf
+      openssl x509 -req -in web/webhook.csr -CA web/ca.crt -CAkey web/ca.key -CAcreateserial -out web/webhook.crt -extensions ext -extfile openssl.cnf
+    fi
+    kubectl create secret tls webhook-certs --cert=web/webhook.crt --key=web/webhook.key -n default
+
+
+  key-remove: |
+    kubectl delete secret webhook-certs
+
+  build-image-kind: |
+    docker build -t mutating-webhook:0.1.0 .
+
+  push-kind: |
+    kind load docker-image mutating-webhook:0.1.0 --name kind
+
+  deploy: |
+    go install github.com/a8m/envsubst/cmd/envsubst@latest
+
+    kubectl apply -f ./k8s/webhook-deployment.yaml
+    kubectl apply -f ./k8s/webhook-service.yaml
+
+    # wait until pod is running
+    sleep 5
+    kubectl wait --for=condition=Ready pod -l app=mutating-webhook --timeout=60s
+
+    export CA_BUNDLE=$(kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}')
+    envsubst < ./k8s/mutating-webhook-config.yaml | kubectl apply -f -
+
+  pod: |
+    kubectl apply -f ./k8s/test-pod.yaml
+
+  cleanup: |
+    kubectl delete -f ./k8s/webhook-deployment.yaml
+    kubectl delete -f ./k8s/webhook-service.yaml
+    kubectl delete -f ./k8s/mutating-webhook-config.yaml
+    kubectl delete -f ./k8s/test-pod.yaml
+
+  cleanup-full: |
+    sharpdev cleanup
+    sharpdev key-remove
+    sharpdev kind-delete
+    sudo rm -r ./web

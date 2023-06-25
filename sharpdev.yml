@@ -15,7 +15,7 @@ scripts:
 
   kind: |
     go install sigs.k8s.io/kind@v0.20.0
-    kind create cluster --name kind --config ./k8s/kind.yaml
+    kind create cluster --name kind
     kubectl config set-context --current --namespace=default
 
   kind-delete: |
@@ -26,15 +26,13 @@ scripts:
     mkdir -p web
     if [ ! -f web/webhook.crt ]; then
       openssl genrsa -out web/ca.key 2048
-      openssl req -x509 -new -nodes -key web/ca.key -subj "/CN=Example-CA" -days 3650 -out web/ca.crt -extensions ext -config openssl.cnf
+      openssl req -x509 -new -nodes -key web/ca.key -days 3650 -out web/ca.crt -config openssl.cnf
 
       openssl genrsa -out web/webhook.key 2048
-      openssl req -new -key web/webhook.key -out web/webhook.csr -subj "/CN=mutating-webhook.default.svc" -config openssl.cnf
-      openssl x509 -req -in web/webhook.csr -CA web/ca.crt -CAkey web/ca.key -CAcreateserial -out web/webhook.crt -extensions ext -extfile openssl.cnf
+      openssl req -new -key web/webhook.key -out web/webhook.csr -config openssl.cnf
+      openssl x509 -req -in web/webhook.csr -CA web/ca.crt -CAkey web/ca.key -CAcreateserial -out web/webhook.crt -extensions v3_req -extfile openssl.cnf
     fi
     kubectl create secret tls webhook-certs --cert=web/webhook.crt --key=web/webhook.key -n default
-
-
 
   key-remove: |
     kubectl delete secret webhook-certs
@@ -61,11 +59,15 @@ scripts:
   pod: |
     kubectl apply -f ./k8s/test-pod.yaml
 
+  job: |
+    kubectl apply -f ./k8s/test-job.yaml
+
   cleanup: |
     kubectl delete -f ./k8s/webhook-deployment.yaml
     kubectl delete -f ./k8s/webhook-service.yaml
     kubectl delete -f ./k8s/mutating-webhook-config.yaml
     kubectl delete -f ./k8s/test-pod.yaml
+    kubectl delete -f ./k8s/test-job.yaml
 
   cleanup-full: |
     sharpdev cleanup

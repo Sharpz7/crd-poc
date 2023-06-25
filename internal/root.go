@@ -4,14 +4,13 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/spf13/cobra"
 	admissionv1 "k8s.io/api/admission/v1"
-	v1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,7 +63,7 @@ func admissionReviewFromRequest(r *http.Request, deserializer runtime.Decoder) (
 	// content for the request.
 	var body []byte
 	if r.Body != nil {
-		requestData, err := ioutil.ReadAll(r.Body)
+		requestData, err := io.ReadAll(r.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -123,9 +122,9 @@ func mutatePod(w http.ResponseWriter, r *http.Request) {
 	// it does not matter what the value is, as long as the key exists.
 	admissionResponse := &admissionv1.AdmissionResponse{}
 	var patch string
-	patchType := v1.PatchTypeJSONPatch
-	if _, ok := pod.Labels["hello"]; !ok {
-		patch = `[{"op":"add","path":"/metadata/labels","value":{"hello":"world"}}]`
+	patchType := admissionv1.PatchTypeJSONPatch
+	if len(pod.Spec.SchedulingGates) == 0 {
+		patch = `[{"op":"add","path":"/spec/schedulingGates","value":[{"name":"mcaq.me/test-gate"}]}]`
 	}
 
 	admissionResponse.Allowed = true

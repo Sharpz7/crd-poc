@@ -1,0 +1,15 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-jobset
+spec:
+  completions: 5
+  parallelism: 5
+  template:
+    spec:
+      containers:
+      - name: worker
+        image: ubuntu:focal
+        command: ["/bin/bash"]
+        args: ["-c", "sleep infinity"]
+      restartPolicy: OnFailure

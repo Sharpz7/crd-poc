@@ -3,7 +3,7 @@ apiVersion: admissionregistration.k8s.io/v1
 metadata:
   name: pod-label-add
 webhooks:
-  - name: pod-label-add.trstringer.com
+  - name: pod-label-add.mcaq.me
     clientConfig:
       caBundle: ${CA_BUNDLE}
       service:

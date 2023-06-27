@@ -41,7 +41,9 @@ scripts:
     docker build -t mutating-webhook:0.1.0 .
 
   push-kind: |
+    docker pull qoomon/docker-host:latest
     kind load docker-image mutating-webhook:0.1.0 --name kind
+    kind load docker-image qoomon/docker-host:latest --name kind
 
   deploy: |
     go install github.com/a8m/envsubst/cmd/envsubst@latest
@@ -56,6 +58,15 @@ scripts:
     export CA_BUNDLE=$(cat web/ca.crt | base64 | tr -d '\n')
     envsubst < ./k8s/mutating-webhook-config.yaml | kubectl apply -f -
 
+    kubectl apply -f ./k8s/localhost.yaml
+
+  webhook: |
+    sharpdev build
+    sharpdev build-image-kind
+    sharpdev push-kind
+    sharpdev cleanup
+    sharpdev deploy
+
   pod: |
     kubectl apply -f ./k8s/test-pod.yaml
 
@@ -66,6 +77,8 @@ scripts:
     kubectl delete -f ./k8s/webhook-deployment.yaml
     kubectl delete -f ./k8s/webhook-service.yaml
     kubectl delete -f ./k8s/mutating-webhook-config.yaml
+    kubectl delete -f ./k8s/localhost.yaml
+
     kubectl delete -f ./k8s/test-pod.yaml
     kubectl delete -f ./k8s/test-job.yaml
 
@@ -74,3 +87,6 @@ scripts:
     sharpdev key-remove
     sharpdev kind-delete
     sudo rm -r ./web
+
+  api: |
+    go run ./cmd/api/main.go --kubeconfig ~/.kube/config

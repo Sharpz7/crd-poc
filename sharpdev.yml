@@ -8,6 +8,7 @@ scripts:
     sharpdev build-image-kind
     sharpdev push-kind
     sharpdev deploy
+    sharpdev setup-crds
 
   build: |
     mkdir -p ./bin
@@ -17,6 +18,7 @@ scripts:
     go install sigs.k8s.io/kind@v0.20.0
     kind create cluster --name kind
     kubectl config set-context --current --namespace=default
+    kubectl create namespace armada
 
   kind-delete: |
     kind delete cluster --name kind
@@ -41,9 +43,7 @@ scripts:
     docker build -t mutating-webhook:0.1.0 .
 
   push-kind: |
-    docker pull qoomon/docker-host:latest
     kind load docker-image mutating-webhook:0.1.0 --name kind
-    kind load docker-image qoomon/docker-host:latest --name kind
 
   deploy: |
     go install github.com/a8m/envsubst/cmd/envsubst@latest
@@ -67,11 +67,13 @@ scripts:
     sharpdev cleanup
     sharpdev deploy
 
-  pod: |
-    kubectl apply -f ./k8s/test-pod.yaml
+  setup-crds: |
+    VERSION=v0.1.3
+    kubectl apply --server-side -f https://github.com/kubernetes-sigs/jobset/releases/download/$VERSION/manifests.yaml
 
-  job: |
-    kubectl apply -f ./k8s/test-job.yaml
+  test: |
+    kubectl apply -f ./k8s/examples/job.yaml
+    kubectl apply -f ./k8s/examples/jobset.yaml
 
   cleanup: |
     kubectl delete -f ./k8s/webhook-deployment.yaml
@@ -79,8 +81,11 @@ scripts:
     kubectl delete -f ./k8s/mutating-webhook-config.yaml
     kubectl delete -f ./k8s/localhost.yaml
 
-    kubectl delete -f ./k8s/test-pod.yaml
-    kubectl delete -f ./k8s/test-job.yaml
+    sharpdev cleanup-min
+
+  cleanup-min: |
+    kubectl delete -f ./k8s/examples/job.yaml
+    kubectl delete -f ./k8s/examples/jobset.yaml
 
   cleanup-full: |
     sharpdev cleanup
@@ -88,5 +93,5 @@ scripts:
     sharpdev kind-delete
     sudo rm -r ./web
 
-  api: |
-    go run ./cmd/api/main.go --kubeconfig ~/.kube/config
+  controller: |
+    go run ./cmd/controller/main.go --kubeconfig ~/.kube/config

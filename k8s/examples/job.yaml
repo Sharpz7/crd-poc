@@ -2,6 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: test-jobset
+  namespace: armada
 spec:
   completions: 5
   parallelism: 5
@@ -11,5 +12,5 @@ spec:
       - name: worker
         image: ubuntu:focal
         command: ["/bin/bash"]
-        args: ["-c", "sleep infinity"]
+        args: ["-c", "sleep 20"]
       restartPolicy: OnFailure
